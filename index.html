@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>張丞佑SDGs 不塑永續-淨灘</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 浪花與海洋動畫 */
+        @keyframes waveMove {
+            0% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(8px) scaleY(1.05); }
+            100% { transform: translateY(0) scaleY(1); }
+        }
+
+        .wave-animation {
+            animation: waveMove 4s ease-in-out infinite;
+        }
+
+        /* 船隻航行動畫 (從左至右循環) */
+        @keyframes sailShip {
+            0% {
+                left: -120px;
+                transform: translateY(0px) rotate(-1deg);
+            }
+            50% {
+                transform: translateY(6px) rotate(2deg);
+            }
+            100% {
+                left: calc(100% + 120px);
+                transform: translateY(0px) rotate(-1deg);
+            }
+        }
+
+        .sailing-ship {
+            animation: sailShip 25s linear infinite;
+        }
+
+        /* 魚群從左游到右的動態動畫 */
+        @keyframes swimLeftToRight {
+            0% {
+                left: -100px;
+                transform: translateY(0px) scaleX(1);
+            }
+            25% {
+                transform: translateY(-8px) scaleX(1);
+            }
+            50% {
+                transform: translateY(4px) scaleX(1);
+            }
+            75% {
+                transform: translateY(-5px) scaleX(1);
+            }
+            100% {
+                left: calc(100% + 100px);
+                transform: translateY(0px) scaleX(1);
+            }
+        }
+
+        .swimming-fish {
+            position: absolute;
+            animation: swimLeftToRight linear infinite;
+            pointer-events: none;
+            z-index: 15;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+        }
+
+        /* 尾巴擺動動畫 */
+        @keyframes tailWiggle {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(15deg); }
+        }
+        .fish-tail {
+            transform-origin: left center;
+            animation: tailWiggle 0.4s ease-in-out infinite;
+        }
+
+        /* 沙灘紋理與背景 */
+        .beach-sand {
+            background: linear-gradient(to bottom, #fce09b 0%, #edd185 50%, #e5c36c 100%);
+            box-shadow: inset 0 20px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 浮動得分動畫 */
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -40px) scale(1.3);
+            }
+        }
+
+        .score-popup {
+            position: absolute;
+            animation: floatUp 0.8s ease-out forwards;
+            pointer-events: none;
+            font-weight: 900;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 50;
+        }
+
+        /* 垃圾 hover 效果 */
+        .trash-item {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+            cursor: pointer;
+        }
+        .trash-item:hover {
+            filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.3)) brightness(1.1);
+        }
+        .trash-item:active {
+            transform: scale(0.85) !important;
+        }
+
+        /* 自訂模態框彈出動畫 */
+        @keyframes modalPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-animate {
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-sky-300 relative select-none">
+
+    <!-- 頂部頁首 HUD (Head-Up Display) -->
+    <header class="absolute top-0 left-0 right-0 z-40 p-4 md:p-6 flex justify-between items-center bg-gradient-to-b from-black/50 via-black/20 to-transparent text-white">
+        <!-- 左上角標題 -->
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg border-2 border-white/40">
+                <i class="fa-solid font-bold fa-recycle text-white text-xl md:text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-3xl font-black tracking-wide drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-emerald-200 via-teal-100 to-white">
+                    張丞佑SDGs 不塑永續-淨灘
+                </h1>
+                <p class="text-xs md:text-sm text-emerald-100/80 font-semibold hidden sm:block">SDG 14 保育海洋生態系統</p>
+            </div>
+        </div>
+
+        <!-- 右上角數據與設定 -->
+        <div class="flex items-center gap-3 md:gap-5">
+            <!-- 音樂/音效開關 -->
+            <button id="soundToggleBtn" class="bg-white/20 hover:bg-white/30 backdrop-blur-md p-2.5 md:p-3 rounded-xl border border-white/30 transition shadow-md text-white">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-lg"></i>
+            </button>
+
+            <!-- 數據統計板 -->
+            <div class="flex items-center gap-2 md:gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-xl">
+                <!-- 關卡 -->
+                <div class="text-center px-2 border-r border-white/20">
+                    <div class="text-[10px] md:text-xs text-amber-300 font-bold uppercase tracking-wider">關卡</div>
+                    <div id="levelDisplay" class="text-base md:text-xl font-extrabold text-amber-400">1</div>
+                </div>
+
+                <!-- 分數 -->
+                <div class="text-center px-2 border-r border-white/20">
+                    <div class="text-[10px] md:text-xs text-emerald-300 font-bold uppercase tracking-wider">總得分</div>
+                    <div id="scoreDisplay" class="text-base md:text-xl font-extrabold text-emerald-400">0</div>
+                </div>
+
+                <!-- 清理進度 -->
+                <div class="text-center px-2">
+                    <div class="text-[10px] md:text-xs text-cyan-300 font-bold uppercase tracking-wider">剩餘垃圾</div>
+                    <div class="text-base md:text-xl font-extrabold text-cyan-200">
+                        <span id="cleanedDisplay">0</span> / <span id="totalDisplay">50</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主遊戲畫面 (全螢幕) -->
+    <main class="relative w-full h-full flex flex-col">
+        <!-- 上半部：藍天、海洋與浪花 (佔高 45%) -->
+        <div class="h-[45%] w-full bg-gradient-to-b from-sky-400 via-sky-300 to-cyan-500 relative overflow-hidden">
+            <!-- 太陽與雲朵 -->
+            <div class="absolute top-6 left-1/4 w-20 h-20 bg-yellow-200/80 rounded-full blur-xl animate-pulse"></div>
+            <div class="absolute top-10 right-12 text-white/40 text-6xl">
+                <i class="fa-solid fa-cloud"></i>
+            </div>
+            <div class="absolute top-16 left-12 text-white/30 text-5xl">
+                <i class="fa-solid fa-cloud"></i>
+            </div>
+
+            <!-- 緩緩划過的船隻 (左向右) -->
+            <div class="sailing-ship absolute top-14 text-slate-800 drop-shadow-lg flex flex-col items-center z-10 opacity-90">
+                <!-- 船帆與旗幟 -->
+                <i class="fa-solid fa-sailboat text-4xl md:text-5xl text-amber-100"></i>
+                <!-- 水波紋尾跡 -->
+                <div class="w-16 h-1 bg-white/40 rounded-full blur-[1px] -mt-1 -ml-4 animate-pulse"></div>
+            </div>
+
+            <!-- 動態魚群游泳區域 (從左至右) -->
+            <div id="seaFishContainer" class="absolute inset-0 overflow-hidden pointer-events-none z-15"></div>
+
+            <!-- 海洋遠景波紋 -->
+            <div class="absolute bottom-0 w-full h-24 bg-cyan-600/40 blur-md"></div>
+            
+            <!-- 浪花層 (海洋與沙灘交界) -->
+            <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-b from-cyan-400/80 via-teal-300/90 to-white/90 wave-animation border-b-4 border-white/60"></div>
+            <!-- 濕沙帶 (邊界處) -->
+            <div class="absolute -bottom-4 left-0 right-0 h-10 bg-[#cca95e]/60 blur-sm"></div>
+        </div>
+
+        <!-- 下半部：沙灘區域 (佔高 55%，50個垃圾隨機分佈在此) -->
+        <div id="beachArea" class="h-[55%] w-full beach-sand relative overflow-hidden shadow-inner">
+            <!-- 沙灘細節裝飾 (貝殼、小石子裝飾背景) -->
+            <div class="absolute top-8 left-10 text-[#d4b055] text-xl opacity-60 rotate-12"><i class="fa-solid fa-shell"></i></div>
+            <div class="absolute bottom-12 right-20 text-[#c7a145] text-2xl opacity-50 -rotate-45"><i class="fa-solid fa-staff-snake"></i></div>
+            <div class="absolute bottom-24 left-1/3 text-[#c7a145] text-lg opacity-40"><i class="fa-solid fa-compact-disc"></i></div>
+        </div>
+    </main>
+
+    <!-- 底部進度條與資訊欄 -->
+    <footer class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 w-11/12 max-w-xl bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 shadow-2xl flex flex-col gap-1.5">
+        <div class="flex justify-between items-center text-xs font-bold text-white">
+            <span class="flex items-center gap-1.5 text-emerald-400">
+                <i class="fa-solid fa-leaf"></i> SDGs 14 海洋生態淨灘任務
+            </span>
+            <span id="timerDisplay" class="text-amber-300">時間: 0 秒</span>
+        </div>
+        <!-- 進度條 -->
+        <div class="w-full bg-gray-700/80 rounded-full h-3 overflow-hidden p-0.5 border border-white/10">
+            <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-teal-300 h-full rounded-full transition-all duration-300 w-0"></div>
+        </div>
+    </footer>
+
+    <!-- 結算彈窗 (Modal) -->
+    <div id="resultModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center text-white modal-animate relative overflow-hidden">
+            <!-- 裝飾微光 -->
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl"></div>
+
+            <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-400 text-4xl shadow-lg">
+                <i class="fa-solid fa-trophy animate-bounce"></i>
+            </div>
+
+            <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-100 mb-1">
+                任務成功！
+            </h2>
+            <p class="text-gray-300 text-sm mb-6">您成功清除沙灘上的所有垃圾，還給海洋一片湛藍！</p>
+
+            <!-- 結算數據 -->
+            <div class="grid grid-cols-2 gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 mb-6">
+                <div class="p-2 bg-white/5 rounded-xl">
+                    <div class="text-xs text-gray-400 font-semibold">本關得分</div>
+                    <div id="modalScore" class="text-2xl font-black text-emerald-400">0</div>
+                </div>
+                <div class="p-2 bg-white/5 rounded-xl">
+                    <div class="text-xs text-gray-400 font-semibold">耗費時間</div>
+                    <div id="modalTime" class="text-2xl font-black text-amber-400">0 秒</div>
+                </div>
+                <div class="col-span-2 p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div class="text-xs text-emerald-300 font-semibold">獲得榮譽稱號</div>
+                    <div id="modalTitle" class="text-lg font-bold text-emerald-200">不塑海洋大師</div>
+                </div>
+            </div>
+
+            <!-- 按鈕組 -->
+            <div class="flex gap-3">
+                <button id="restartBtn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-slate-700 hover:bg-slate-600 active:scale-95 transition shadow-lg border border-white/10">
+                    重新開始
+                </button>
+                <button id="nextLevelBtn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 transition shadow-lg border border-emerald-300/40 text-white">
+                    前往下一關 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲邏輯與 Web Audio API 音效處理 -->
+    <script>
+        // --- 垃圾類型與屬性設定 ---
+        const TRASH_TYPES = [
+            { name: '寶特瓶', icon: 'fa-bottle-water', category: 'small', points: 10, color: 'text-cyan-600', bg: 'bg-cyan-100', sizeClass: 'w-8 h-8 text-lg' },
+            { name: '鋁罐', icon: 'fa-wine-can', category: 'small', points: 10, color: 'text-rose-500', bg: 'bg-rose-100', sizeClass: 'w-8 h-8 text-lg' },
+            { name: '塑膠袋', icon: 'fa-box-tissue', category: 'medium', points: 20, color: 'text-slate-500', bg: 'bg-slate-200', sizeClass: 'w-12 h-12 text-2xl' },
+            { name: '飲料杯', icon: 'fa-cup-togo', category: 'medium', points: 20, color: 'text-amber-600', bg: 'bg-amber-100', sizeClass: 'w-11 h-11 text-2xl' },
+            { name: '紙類餐盒', icon: 'fa-box-open', category: 'medium', points: 20, color: 'text-orange-600', bg: 'bg-orange-100', sizeClass: 'w-12 h-12 text-2xl' },
+            { name: '保麗龍塊', icon: 'fa-cube', category: 'large', points: 30, color: 'text-gray-400', bg: 'bg-white', sizeClass: 'w-16 h-16 text-3xl' },
+            { name: '漂流木', icon: 'fa-tree', category: 'large', points: 30, color: 'text-amber-800', bg: 'bg-amber-200', sizeClass: 'w-16 h-16 text-3xl' }
+        ];
+
+        // 遊戲狀態變數
+        const TOTAL_TRASH_COUNT = 50;
+        let score = 0;
+        let cleanedCount = 0;
+        let currentLevel = 1;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let isSoundEnabled = true;
+
+        // 生成從左游到右的熱帶魚
+        function createSwimmingFish() {
+            const container = document.getElementById('seaFishContainer');
+            if (!container) return;
+            container.innerHTML = ''; // 清空舊魚
+
+            // 魚的種類與色彩調配
+            const fishTemplates = [
+                { color: 'text-orange-500', size: 'text-2xl md:text-3xl', speed: 12 },
+                { color: 'text-yellow-400', size: 'text-xl md:text-2xl', speed: 16 },
+                { color: 'text-rose-400', size: 'text-3xl md:text-4xl', speed: 20 },
+                { color: 'text-cyan-200', size: 'text-lg md:text-xl', speed: 10 },
+                { color: 'text-amber-300', size: 'text-2xl md:text-3xl', speed: 15 }
+            ];
+
+            const fishCount = 6; // 生成 6 隻魚
+
+            for (let i = 0; i < fishCount; i++) {
+                const fishInfo = fishTemplates[i % fishTemplates.length];
+                const fishEl = document.createElement('div');
+                
+                // 亂數浮動位置與延遲時間
+                const topPos = 45 + Math.random() * 40; // 位於海洋高度 (45% ~ 85%)
+                const delay = Math.random() * -20; // 錯開游出時間
+                const duration = fishInfo.speed + (Math.random() * 6 - 3);
+
+                fishEl.className = `swimming-fish ${fishInfo.color} ${fishInfo.size}`;
+                fishEl.style.top = `${topPos}%`;
+                fishEl.style.animationDuration = `${duration}s`;
+                fishEl.style.animationDelay = `${delay}s`;
+
+                // 魚的 HTML 結構 (魚身 + 擺動魚尾)
+                fishEl.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-fish"></i>
+                        <i class="fa-solid fa-fish-fins fish-tail -ml-1.5 opacity-80"></i>
+                    </div>
+                `;
+
+                container.appendChild(fishEl);
+            }
+        }
+
+        // Web Audio API 音效處理器
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            // 播放拾取垃圾音效 (高音清脆聲)
+            playPickSound(sizeCategory) {
+                if (!isSoundEnabled) return;
+                this.init();
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                let startFreq = 400;
+                let endFreq = 800;
+
+                if (sizeCategory === 'medium') {
+                    startFreq = 500; endFreq = 950;
+                } else if (sizeCategory === 'large') {
+                    startFreq = 300; endFreq = 700;
+                }
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(startFreq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(endFreq, this.ctx.currentTime + 0.12);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            // 播放勝利音效
+            playVictorySound() {
+                if (!isSoundEnabled) return;
+                this.init();
+
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.1);
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.1 + 0.3);
+
+                    osc.start(this.ctx.currentTime + idx * 0.1);
+                    osc.stop(this.ctx.currentTime + idx * 0.1 + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // DOM 元素引用
+        const beachArea = document.getElementById('beachArea');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const cleanedDisplay = document.getElementById('cleanedDisplay');
+        const totalDisplay = document.getElementById('totalDisplay');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const progressBar = document.getElementById('progressBar');
+        const resultModal = document.getElementById('resultModal');
+        const modalScore = document.getElementById('modalScore');
+        const modalTime = document.getElementById('modalTime');
+        const modalTitle = document.getElementById('modalTitle');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+
+        // 啟動與初始化遊戲
+        function initGame(resetLevel = false) {
+            if (resetLevel) {
+                currentLevel = 1;
+                score = 0;
+            }
+
+            cleanedCount = 0;
+            timerSeconds = 0;
+            updateHUD();
+
+            // 生成海中游動的魚
+            createSwimmingFish();
+
+            // 啟動計時器
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                timerDisplay.innerText = `時間: ${timerSeconds} 秒`;
+            }, 1000);
+
+            // 清空舊垃圾並重新生成 50 個垃圾
+            beachArea.innerHTML = `
+                <div class="absolute top-8 left-10 text-[#d4b055] text-xl opacity-60 rotate-12"><i class="fa-solid fa-shell"></i></div>
+                <div class="absolute bottom-12 right-20 text-[#c7a145] text-2xl opacity-50 -rotate-45"><i class="fa-solid fa-staff-snake"></i></div>
+                <div class="absolute bottom-24 left-1/3 text-[#c7a145] text-lg opacity-40"><i class="fa-solid fa-compact-disc"></i></div>
+            `;
+            generateTrashItems();
+
+            // 隱藏 Modal
+            resultModal.classList.add('hidden');
+        }
+
+        // 隨機生成 50 個垃圾於沙灘區域 (下半部)
+        function generateTrashItems() {
+            const containerWidth = beachArea.clientWidth;
+            const containerHeight = beachArea.clientHeight;
+
+            // 邊距邊界
+            const paddingX = 40;
+            const paddingTop = 30;
+            const paddingBottom = 60;
+
+            for (let i = 0; i < TOTAL_TRASH_COUNT; i++) {
+                // 隨機選取垃圾種類
+                const type = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
+
+                // 隨機座標 (0%~100% 限制在沙灘範圍內)
+                const randomX = paddingX + Math.random() * (containerWidth - paddingX * 2);
+                const randomY = paddingTop + Math.random() * (containerHeight - paddingTop - paddingBottom);
+
+                // 隨機旋轉角度 (0 ~ 360 度)
+                const randomRotation = Math.floor(Math.random() * 360);
+
+                // 建立垃圾 DOM
+                const trashEl = document.createElement('div');
+                trashEl.className = `trash-item absolute flex items-center justify-center rounded-full border border-black/10 shadow-md ${type.bg} ${type.color} ${type.sizeClass}`;
+                trashEl.style.left = `${randomX}px`;
+                trashEl.style.top = `${randomY}px`;
+                trashEl.style.transform = `rotate(${randomRotation}deg)`;
+
+                // 內嵌圖示
+                trashEl.innerHTML = `<i class="fa-solid ${type.icon}"></i>`;
+
+                // 綁定點擊與觸控事件
+                trashEl.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    cleanTrash(trashEl, type, randomX, randomY);
+                });
+
+                beachArea.appendChild(trashEl);
+            }
+        }
+
+        // 清除點擊的垃圾
+        function cleanTrash(element, type, x, y) {
+            if (element.dataset.cleaned === 'true') return;
+            element.dataset.cleaned = 'true';
+
+            // 計算關卡得分加成
+            const earnedPoints = type.points * currentLevel;
+            score += earnedPoints;
+            cleanedCount++;
+
+            // 播放音效
+            sound.playPickSound(type.category);
+
+            // 顯示浮動得分 (+10, +20, +30)
+            showScorePopup(x, y, `+${earnedPoints}`);
+
+            // 移除垃圾元素動畫
+            element.style.transform += ' scale(0)';
+            element.style.opacity = '0';
+            setTimeout(() => {
+                element.remove();
+            }, 200);
+
+            // 更新 HUD 數據
+            updateHUD();
+
+            // 檢查是否全數撿完
+            if (cleanedCount >= TOTAL_TRASH_COUNT) {
+                clearInterval(timerInterval);
+                setTimeout(showVictoryModal, 500);
+            }
+        }
+
+        // 顯示浮動得分動畫
+        function showScorePopup(x, y, text) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup text-amber-300 text-lg md:text-xl font-black';
+            popup.innerText = text;
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y - 10}px`;
+
+            beachArea.appendChild(popup);
+            setTimeout(() => popup.remove(), 800);
+        }
+
+        // 更新 HUD UI 數據與進度條
+        function updateHUD() {
+            scoreDisplay.innerText = score;
+            cleanedDisplay.innerText = cleanedCount;
+            totalDisplay.innerText = TOTAL_TRASH_COUNT;
+            levelDisplay.innerText = currentLevel;
+
+            const progressPercent = (cleanedCount / TOTAL_TRASH_COUNT) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+        }
+
+        // 顯示結算 Modal
+        function showVictoryModal() {
+            sound.playVictorySound();
+
+            modalScore.innerText = score;
+            modalTime.innerText = `${timerSeconds} 秒`;
+
+            // 設定評級稱號
+            if (timerSeconds < 30) {
+                modalTitle.innerText = '⚡ 閃電淨灘戰士';
+            } else if (timerSeconds < 60) {
+                modalTitle.innerText = '🌊 海洋保護大師';
+            } else {
+                modalTitle.innerText = '🌱 永續環保衛士';
+            }
+
+            resultModal.classList.remove('hidden');
+        }
+
+        // 音效切換
+        soundToggleBtn.addEventListener('click', () => {
+            isSoundEnabled = !isSoundEnabled;
+            if (isSoundEnabled) {
+                soundIcon.className = 'fa-solid fa-volume-high text-lg';
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-xmark text-lg text-rose-300';
+            }
+        });
+
+        // 重新開始按鈕
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            initGame(true);
+        });
+
+        // 下一關按鈕
+        document.getElementById('nextLevelBtn').addEventListener('click', () => {
+            currentLevel++;
+            initGame(false);
+        });
+
+        // 視窗大小改變時重新佈局（保持垃圾在視野內）
+        window.addEventListener('resize', () => {
+            if (cleanedCount < TOTAL_TRASH_COUNT) {
+                initGame(false);
+            }
+        });
+
+        // 頁面載入完成後啟動遊戲
+        window.onload = () => {
+            initGame(true);
+        };
+    </script>
+</body>
+</html>
